@@ -9,16 +9,17 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://via.placeholder.com/192x192.png",
+      "src": "https://cdn.icon-icons.com/icons2/3248/PNG/512/box_package_shipping_delivery_icon_196592.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://via.placeholder.com/512x512.png",
+      "src": "https://cdn.icon-icons.com/icons2/3248/PNG/512/box_package_shipping_delivery_icon_196592.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     }
-  ]
+  ],
+  "categories": ["business", "productivity"]
 }
