@@ -17,18 +17,34 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Dependencies & Build
+      - name: Prepare Files & Build APK
         run: |
+          # 1. 初始化 npm
           npm init -y
+
+          # 2. 安装 Capacitor 核心包
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init "InventoryApp" "com.example.inventory" --web-dir=.
+
+          # 3. 【关键修改】创建一个 www 文件夹，把你的网页文件复制进去
+          # Capacitor 不允许 webDir 为 "."，必须是具体文件夹
+          mkdir www
+          cp index.html www/
+          cp manifest.json www/
+          cp service-worker.js www/
+          cp -r icons www/ 2>/dev/null || echo "No icons folder"
+          cp -r images www/ 2>/dev/null || echo "No images folder"
+
+          # 4. 初始化 Capacitor，指定 webDir 为 "www"
+          npx cap init "InventoryApp" "com.example.inventory" --web-dir=www
+
+          # 5. 添加 Android 平台
           npx cap add android
-          npx cap sync
+
+          # 6. 编译 APK (使用 Gradle)
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      # 注意这里改成了 v4
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
