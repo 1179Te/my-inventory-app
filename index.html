@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="description" content="一个简单的库存管理系统">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>📦</text></svg>">
+    <title>库存管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        input[type="file"] {
+            margin-top: 5px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #2196F3;
+            color: white;
+        }
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+        .search-section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .inventory-list {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .low-stock {
+            background-color: #ffebee;
+            color: #c62828;
+            font-weight: bold;
+        }
+        .product-image {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>库存管理系统</h1>
+        
+        <!-- 表单区域 -->
+        <div class="form-section">
+            <h2>添加/编辑产品</h2>
+            <form id="productForm">
+                <input type="hidden" id="productId">
+                <div class="form-group">
+                    <label for="productName">产品名称</label>
+                    <input type="text" id="productName" required>
+                </div>
+                <div class="form-group">
+                    <label for="productQuantity">库存数量</label>
+                    <input type="number" id="productQuantity" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="productPrice">单价</label>
+                    <input type="number" id="productPrice" min="0" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="productDescription">描述</label>
+                    <textarea id="productDescription" rows="3"></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">保存</button>
+                    <button type="button" class="btn-secondary" id="clearForm">清空</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- 搜索区域 -->
+        <div class="search-section">
+            <h2>搜索产品</h2>
+            <input type="text" id="searchBox" class="search-box" placeholder="输入产品名称搜索...">
+        </div>
+        
+        <!-- 库存列表 -->
+        <div class="inventory-list">
+            <h2>库存列表</h2>
+            <table id="inventoryTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>产品名称</th>
+                        <th>库存数量</th>
+                        <th>单价</th>
+                        <th>描述</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        // 全局变量
+        let products = [];
+        let editingId = null;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProducts();
+            setupEventListeners();
+        });
+        
+        // 加载产品数据
+        function loadProducts() {
+            const storedProducts = localStorage.getItem('inventory_products');
+            if (storedProducts) {
+                products = JSON.parse(storedProducts);
+            } else {
+                // 初始示例数据
+                products = [
+                    { id: 1, name: '产品A', quantity: 15, price: 100, description: '示例产品A' },
+                    { id: 2, name: '产品B', quantity: 8, price: 200, description: '示例产品B' },
+                    { id: 3, name: '产品C', quantity: 25, price: 150, description: '示例产品C' }
+                ];
+                saveProducts();
+            }
+            renderInventory();
+        }
+        
+        // 保存产品数据
+        function saveProducts() {
+            try {
+                localStorage.setItem('inventory_products', JSON.stringify(products));
+                console.log('数据保存成功，当前产品数量：', products.length);
+                console.log('localStorage使用情况：', JSON.stringify(products).length, 'bytes');
+            } catch (error) {
+                console.error('数据保存失败：', error);
+                alert('数据保存失败，可能是存储空间不足，请删除一些产品或图片后再试。');
+            }
+        }
+        
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 表单提交
+            document.getElementById('productForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveProduct();
+            });
+            
+            // 清空表单
+            document.getElementById('clearForm').addEventListener('click', clearForm);
+            
+            // 搜索功能
+            document.getElementById('searchBox').addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                renderInventory(searchTerm);
+            });
+        }
+        
+        // 保存产品
+        function saveProduct() {
+            const id = document.getElementById('productId').value;
+            const name = document.getElementById('productName').value;
+            const quantity = parseInt(document.getElementById('productQuantity').value);
+            const price = parseFloat(document.getElementById('productPrice').value);
+            const description = document.getElementById('productDescription').value;
+            
+            if (id) {
+                // 编辑现有产品
+                const index = products.findIndex(p => p.id == id);
+                if (index !== -1) {
+                    products[index] = { id: parseInt(id), name, quantity, price, description };
+                }
+            } else {
+                // 添加新产品
+                const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+                products.push({ id: newId, name, quantity, price, description });
+            }
+            
+            saveProducts();
+            renderInventory();
+            clearForm();
+        }
+        
+        // 清空表单
+        function clearForm() {
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            editingId = null;
+        }
+        
+        // 编辑产品
+        function editProduct(id) {
+            const product = products.find(p => p.id == id);
+            if (product) {
+                document.getElementById('productId').value = product.id;
+                document.getElementById('productName').value = product.name;
+                document.getElementById('productQuantity').value = product.quantity;
+                document.getElementById('productPrice').value = product.price;
+                document.getElementById('productDescription').value = product.description;
+                editingId = id;
+            }
+        }
+        
+        // 删除产品
+        function deleteProduct(id) {
+            if (confirm('确定要删除这个产品吗？')) {
+                products = products.filter(p => p.id != id);
+                saveProducts();
+                renderInventory();
+            }
+        }
+        
+        // 入库
+        function addStock(id) {
+            const product = products.find(p => p.id == id);
+            if (product) {
+                const amount = parseInt(prompt('请输入入库数量：'));
+                if (!isNaN(amount) && amount > 0) {
+                    product.quantity += amount;
+                    saveProducts();
+                    renderInventory();
+                }
+            }
+        }
+        
+        // 出库
+        function removeStock(id) {
+            const product = products.find(p => p.id == id);
+            if (product) {
+                const amount = parseInt(prompt('请输入出库数量：'));
+                if (!isNaN(amount) && amount > 0 && product.quantity >= amount) {
+                    product.quantity -= amount;
+                    saveProducts();
+                    renderInventory();
+                } else if (product.quantity < amount) {
+                    alert('库存不足，无法出库');
+                }
+            }
+        }
+        
+        // 渲染库存列表
+        function renderInventory(searchTerm = '') {
+            const tbody = document.getElementById('inventoryBody');
+            tbody.innerHTML = '';
+            
+            const filteredProducts = products.filter(p => 
+                p.name.toLowerCase().includes(searchTerm)
+            );
+            
+            filteredProducts.forEach(product => {
+                const row = document.createElement('tr');
+                // 库存不足时添加高亮类
+                if (product.quantity < 10) {
+                    row.classList.add('low-stock');
+                }
+                
+                row.innerHTML = `
+                    <td>${product.id}</td>
+                    <td>${product.name}</td>
+                    <td>${product.quantity} ${product.quantity < 10 ? '(库存不足)' : ''}</td>
+                    <td>¥${product.price.toFixed(2)}</td>
+                    <td>${product.description}</td>
+                    <td class="action-buttons">
+                        <button class="btn-primary" onclick="addStock(${product.id})">入库</button>
+                        <button class="btn-secondary" onclick="removeStock(${product.id})">出库</button>
+                        <button class="btn-secondary" onclick="editProduct(${product.id})">编辑</button>
+                        <button class="btn-danger" onclick="deleteProduct(${product.id})">删除</button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+    </script>
+    <script>
+        // 注册 service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then((registration) => {
+                        console.log('Service Worker 注册成功:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('Service Worker 注册失败:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
